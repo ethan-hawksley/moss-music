@@ -1,0 +1,50 @@
+{
+  "name": "moss-music",
+  "version": "1.0.0",
+  "description": "A music player",
+  "main": "main.js",
+  "build": {
+    "appId": "com.ethan-hawksley.music",
+    "productName": "Moss Music",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "icon.png",
+      "index.html",
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "styles.css"
+    ],
+    "mac": {
+      "category": "public.app-category.music"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  },
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "build": "electron-builder"
+  },
+  "repository": "https://github.com/ethan-hawksley/moss-music",
+  "keywords": [
+    "music"
+  ],
+  "author": "GitHub",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.2",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  }
+}

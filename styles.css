@@ -1,0 +1,18 @@
+body {
+    background-color: #f4f4f4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 1rem;
+    min-width: 15rem;
+}
+
+#audio-player {
+    max-width: 70%;
+}
+
+.active {
+    font-weight: bold;
+}
+
+.show-crosshair {
+    cursor: crosshair;
+}

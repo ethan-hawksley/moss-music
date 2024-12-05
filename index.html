@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta
+            content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+            http-equiv="Content-Security-Policy"
+    />
+    <link href="./styles.css" rel="stylesheet"/>
+    <title>Moss Music</title>
+</head>
+<body>
+<header>
+    <h1>Moss Music</h1>
+</header>
+<main>
+    <form id="add-playlist-form">
+        <label for="add-playlist-input">Add Playlist:</label>
+        <input id="add-playlist-input" type="text"/>
+        <button id="add-playlist-input-button" type="button">Add</button>
+    </form>
+    <label>
+        Download Progress:
+        <progress id="download-progress" max="1" value="0"></progress>
+    </label>
+    <br/>
+    <button id="remove-playlist-input-button" type="button">Remove</button>
+    <button id="refresh-playlist-input-button" type="button">Refresh</button>
+    <div id="playlist-list">
+        <!-- Dynamically populated by list of playlists -->
+    </div>
+    <div id="player" style="display: none">
+        <audio controls id="audio-player" src=""></audio>
+        <p id="current-song"></p>
+        <button id="previous-button">Previous</button>
+        <button id="next-button">Next</button>
+        <label for="shuffle-checkbox">Shuffle</label>
+        <input id="shuffle-checkbox" type="checkbox"/>
+        <form id="playback-setting-form">
+            <label>
+                <input checked name="playback" type="radio" value="continue"/>
+                Continue
+            </label>
+            <label>
+                <input name="playback" type="radio" value="loop"/> Loop
+            </label>
+            <label>
+                <input name="playback" type="radio" value="stop"/> Stop
+            </label>
+        </form>
+        <br/>
+        <br/>
+        <div id="song-list">
+            <!-- Dynamically populated by list of songs -->
+        </div>
+    </div>
+</main>
+<script src="./renderer.js"></script>
+</body>
+</html>
