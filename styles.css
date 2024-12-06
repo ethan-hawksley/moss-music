@@ -10,7 +10,7 @@ body {
 }
 
 .active {
-    font-weight: bold;
+    text-shadow: -0.06ex 0 0 currentColor, 0.06ex 0 0 currentColor;
 }
 
 .show-crosshair {
