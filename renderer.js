@@ -34,7 +34,7 @@ const enableButtons = () => {
 // Update the audio player with the current song.
 const updateAudioPlayer = (song) => {
     audioPlayer.src = song.path;
-    audioPlayer.play();
+    audioPlayer.play().catch(e => nextSong());
     currentSong.textContent = song.title;
 };
 
@@ -207,7 +207,7 @@ const setupEventListeners = () => {
     audioPlayer.addEventListener('play', () => window.playback.playbackChange('play'));
     audioPlayer.addEventListener('pause', () => window.playback.playbackChange('pause'));
 
-    window.playback.play(() => audioPlayer.play());
+    window.playback.play(() => audioPlayer.play().catch(e => nextSong()));
     window.playback.pause(() => audioPlayer.pause());
 };
 
