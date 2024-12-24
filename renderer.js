@@ -4,6 +4,7 @@ const addPlaylistInputButton = document.getElementById('add-playlist-input-butto
 const downloadProgress = document.getElementById('download-progress');
 const removePlaylistInputButton = document.getElementById('remove-playlist-input-button');
 const refreshPlaylistInputButton = document.getElementById('refresh-playlist-input-button');
+const reorderPlaylistInputButton = document.getElementById('reorder-playlist-input-button');
 const playlistListDiv = document.getElementById('playlist-list');
 const playerDiv = document.getElementById('player');
 const audioPlayer = document.getElementById('audio-player');
@@ -23,12 +24,14 @@ const disableButtons = () => {
     addPlaylistInputButton.disabled = true;
     removePlaylistInputButton.disabled = true;
     refreshPlaylistInputButton.disabled = true;
+    reorderPlaylistInputButton.disabled = true;
 };
 
 const enableButtons = () => {
     addPlaylistInputButton.disabled = false;
     removePlaylistInputButton.disabled = false;
     refreshPlaylistInputButton.disabled = false;
+    reorderPlaylistInputButton.disabled = false;
 };
 
 // Update the audio player with the current song.
@@ -61,6 +64,12 @@ const playPlaylist = async (playlistId) => {
         await window.ytdlp.removePlaylist(playlistId);
         await renderPlaylists();
         enableButtons();
+    } else if (reorderPlaylistInputButton.textContent === "Cancel") {
+        if (currentPlaylist !== playlistId && currentPlaylist) {
+            await window.ytdlp.swapPlaylists(currentPlaylist, playlistId);
+            reorderPlaylistInputButton.textContent = "Reorder";
+            await renderPlaylists();
+        }
     } else {
         // Else play the playlist
         if (currentPlaylist !== playlistId) {
@@ -132,6 +141,9 @@ const renderPlaylists = async () => {
         fragment.appendChild(button);
     });
     playlistListDiv.replaceChildren(fragment);
+    if (currentPlaylist) {
+        document.getElementById(currentPlaylist + '-button').className = 'active';
+    }
 };
 
 const setupEventListeners = () => {
@@ -193,6 +205,23 @@ const setupEventListeners = () => {
         }
         localStorage.setItem('last-updated', Date.now().valueOf().toString());
         enableButtons();
+    });
+
+    reorderPlaylistInputButton.addEventListener('click', async () => {
+        addPlaylistInputButton.disabled = true;
+        const playlistButtons = playlistListDiv.children;
+        if (reorderPlaylistInputButton.textContent === "Reorder") {
+            reorderPlaylistInputButton.textContent = "Cancel";
+            for (let i = 0; i < playlistButtons.length; i++) {
+                playlistButtons[i].classList.add("show-crosshair");
+            }
+        } else {
+            reorderPlaylistInputButton.textContent = "Reorder";
+            enableButtons();
+            for (let i = 0; i < playlistButtons.length; i++) {
+                playlistButtons[i].classList.remove("show-crosshair");
+            }
+        }
     });
 
     window.ytdlp.onPlaylistProgress((progress) => {

@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('ytdlp', {
     onPlaylistProgress: (callback) => ipcRenderer.on('playlistProgress', (_event, progress) => callback(progress)),
     getPlaylists: () => ipcRenderer.invoke('getPlaylists'),
     getSongs: (playlistId) => ipcRenderer.invoke('getSongs', playlistId),
+    swapPlaylists: (playlistID1, playlistID2) => ipcRenderer.invoke('swapPlaylists', playlistID1, playlistID2),
 })
 
 contextBridge.exposeInMainWorld('playback', {

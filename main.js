@@ -26,7 +26,8 @@ let db = new sqlite3.Database(DB_PATH, (err) => {
 db.serialize(() => {
     db.run(`CREATE TABLE IF NOT EXISTS playlists (
         id TEXT PRIMARY KEY,
-        title TEXT NOT NULL
+        title TEXT NOT NULL,
+        position INTEGER NOT NULL
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS songs (
@@ -50,11 +51,38 @@ db.serialize(() => {
 
 // Database functions
 const getPlaylists = () => new Promise((resolve, reject) => {
-    db.all('SELECT id, title FROM playlists', (err, rows) => {
+    db.all(`SELECT id, title, position
+            FROM playlists
+            ORDER BY position`, (err, rows) => {
         if (err) return reject('Error fetching playlists');
-        resolve(rows.map(row => ({id: row.id, title: row.title})));
+        resolve(rows.map(row => ({id: row.id, title: row.title, position: row.position})));
     });
 });
+
+const getPlaylistData = (id) => new Promise((resolve, reject) => {
+    db.all(`SELECT id, title, position
+            FROM playlists
+            WHERE id = ?`, [id], (err, rows) => {
+        if (err) return reject('Error getting data of playlist');
+        console.log(rows)
+        resolve(rows.map(row => ({id: row.id, title: row.title, position: row.position}))[0]);
+    })
+})
+
+const getHighestPlaylistPosition = () => new Promise((resolve, reject) => {
+    db.all('SELECT MAX(position) as position FROM playlists', (err, rows) => {
+        if (err) return reject('Error fetching max position');
+        console.log(rows)
+        if (rows[0].position === null) {
+            console.log('nothing')
+            resolve(-1)
+        } else {
+            console.log('resolving', rows[0].position)
+            resolve(rows[0].position);
+        }
+    });
+});
+
 
 const getSongs = (playlistId) => new Promise((resolve, reject) => {
     db.all(`SELECT songs.id, songs.title, songs.path, songs.channel, songs.duration, playlist_songs.position
@@ -68,8 +96,34 @@ const getSongs = (playlistId) => new Promise((resolve, reject) => {
         if (err) return reject('Error fetching songs');
         resolve(rows);
     });
-})
+});
 
+const swapPlaylists = (playlistId1, playlistId2) => new Promise(async (resolve, reject) => {
+    const playlistData = await getPlaylists();
+    const playlist1Position = playlistData.find((element) => element.id === playlistId1).position;
+    const playlist2Position = playlistData.find((element) => element.id === playlistId2).position;
+    const updatePlaylist1Position = new Promise((resolve, reject) => {
+        db.run(`UPDATE playlists
+                SET position = ?
+                WHERE id = ?`,
+            [playlist2Position, playlistId1], (err) => {
+                if (err) return reject(err);
+                resolve();
+            });
+    });
+
+    const updatePlaylist2Position = new Promise((resolve, reject) => {
+        db.run(`UPDATE playlists
+                SET position = ?
+                WHERE id = ?`,
+            [playlist1Position, playlistId2], (err) => {
+                if (err) return reject(err);
+                resolve();
+            });
+    });
+    await Promise.all([updatePlaylist1Position, updatePlaylist2Position]);
+    resolve('ok')
+})
 
 const deleteUnreferencedSongs = () => {
     db.all('SELECT id, path FROM songs WHERE id NOT IN (SELECT song_id FROM playlist_songs)', (err, rows) => {
@@ -78,9 +132,9 @@ const deleteUnreferencedSongs = () => {
             fs.unlink(row.path, (err) => {
                 if (err) console.error('Error deleting song file', err.message); else console.log('Deleted song file:', row.path);
             });
-        db.run('DELETE FROM songs WHERE id NOT IN (SELECT song_id FROM playlist_songs)', (err) => {
-            if (err) console.error('Error deleting unreferenced songs from database:', err.message); else console.log('Deleted unreferenced songs from database');
-        });
+            db.run('DELETE FROM songs WHERE id NOT IN (SELECT song_id FROM playlist_songs)', (err) => {
+                if (err) console.error('Error deleting unreferenced songs from database:', err.message); else console.log('Deleted unreferenced songs from database');
+            });
         });
     });
 };
@@ -117,7 +171,7 @@ const fetchPlaylistData = (playlistURL) => new Promise((resolve, reject) => {
 });
 
 const downloadSong = (song, directory) => new Promise((resolve) => {
-    const command = child_process.spawn('yt-dlp', ['-x', '-P', directory, `https://youtube.com/watch?v=${song.id}`]);
+    const command = child_process.spawn('yt-dlp', ['-x', '--restrict-filenames', '--windows-filenames', '-P', directory, `https://youtube.com/watch?v=${song.id}`]);
     command.stdout.on('data', (data) => {
         console.log(data.toString());
         if (data.toString().startsWith('[ExtractAudio] Destination: ')) {
@@ -143,11 +197,13 @@ const downloadPlaylist = (playlistURL) => new Promise(async (resolve, reject) =>
 
         const playlistData = await fetchPlaylistData(playlistURL);
         mainWindow.webContents.send('playlistProgress', [playlistURL, 0]);
+        const highestPosition = await getHighestPlaylistPosition()
+        console.log(highestPosition)
 
         db.get('SELECT id, title FROM playlists WHERE id = ?', [playlistData.id], (err, row) => {
             if (err) return reject(err);
             if (!row) {
-                db.run('INSERT INTO playlists (id, title) VALUES (?, ?)', [playlistData.id, playlistData.title], (err) => {
+                db.run('INSERT INTO playlists (id, title, position) VALUES (?, ?, ?)', [playlistData.id, playlistData.title, highestPosition + 1], (err) => {
                     if (err) console.error('Error inserting playlist:', err.message);
                 });
             } else if (row.title !== playlistData.title) {
@@ -206,6 +262,7 @@ const downloadPlaylist = (playlistURL) => new Promise(async (resolve, reject) =>
 const removePlaylist = (playlistID) => new Promise(async (resolve, reject) => {
     try {
         const playlistData = await fetchPlaylistData(`https://youtube.com/playlist?list=${playlistID}`);
+        const playlistDatabaseData = await getPlaylistData(playlistID);
 
         const deletePlaylistPromise = new Promise((resolve, reject) => {
             db.run('DELETE FROM playlists WHERE id = ?', [playlistData.id], (err) => {
@@ -223,7 +280,18 @@ const removePlaylist = (playlistID) => new Promise(async (resolve, reject) => {
             });
         });
 
-        await Promise.all([deletePlaylistPromise, deletePlaylistSongsPromise]);
+        const updatePlaylistPositions = new Promise((resolve, reject) => {
+            db.run(`UPDATE playlists
+                    SET position = position - 1
+                    WHERE position > ?
+                      AND POSITION > 0`, [playlistDatabaseData.position], (err) => {
+                if (err) return reject(err);
+                console.log('Playlist positions decremented');
+                resolve();
+            })
+        })
+
+        await Promise.all([deletePlaylistPromise, deletePlaylistSongsPromise, updatePlaylistPositions]);
         await deleteUnreferencedSongs();
         resolve();
     } catch (error) {
@@ -236,6 +304,7 @@ ipcMain.handle('downloadPlaylist', (event, playlistURL) => downloadPlaylist(play
 ipcMain.handle('removePlaylist', (event, playlistID) => removePlaylist(playlistID));
 ipcMain.handle('getPlaylists', async () => await getPlaylists());
 ipcMain.handle('getSongs', (event, playlistId) => getSongs(playlistId));
+ipcMain.handle('swapPlaylists', (event, playlistId1, playlistId2) => swapPlaylists(playlistId1, playlistId2));
 ipcMain.on('playbackChange', (_event, state) => updateTrayMenu(state));
 
 // Electron app lifecycle
@@ -253,7 +322,7 @@ function createWindow() {
     });
     mainWindow.setMenu(null);
     mainWindow.loadFile('index.html');
-    //mainWindow.openDevTools();
+    mainWindow.openDevTools();
 }
 
 function updateTrayMenu(state) {
