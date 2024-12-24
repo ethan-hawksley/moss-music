@@ -322,7 +322,7 @@ function createWindow() {
     });
     mainWindow.setMenu(null);
     mainWindow.loadFile('index.html');
-    mainWindow.openDevTools();
+    //mainWindow.openDevTools();
 }
 
 function updateTrayMenu(state) {
