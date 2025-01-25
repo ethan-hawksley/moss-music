@@ -248,7 +248,7 @@ const init = async () => {
     // Check if the playlists need to be updated every 24 hours.
     if (localStorage.getItem('last-updated')) {
         const currentTime = Date.now().valueOf();
-        if (currentTime - Number(localStorage.getItem('last-updated')) > 86400000 /* 24 hours */) {
+        if (currentTime - Number(localStorage.getItem('last-updated')) > 604800000  /* 7 days */) {
             if (window.navigator.onLine) {
                 const playlists = await window.ytdlp.getPlaylists();
                 await Promise.all(playlists.map(playlist => window.ytdlp.downloadPlaylist(playlist.id)));
