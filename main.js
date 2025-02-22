@@ -14,6 +14,7 @@ if (!fs.existsSync(DATA_DIRECTORY)) fs.mkdirSync(DATA_DIRECTORY, {recursive: tru
 console.log(DATA_DIRECTORY);
 const DB_PATH = path.join(DATA_DIRECTORY, 'database.db');
 const SONG_DIRECTORY = path.join(DATA_DIRECTORY, 'songs');
+const SONG_FILE_DIRECTORY = path.join(DATA_DIRECTORY, 'files')
 let mainWindow;
 let tray;
 
@@ -34,8 +35,7 @@ db.serialize(() => {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         path TEXT NOT NULL,
-        channel TEXT NOT NULL,
-        duration INTEGER NOT NULL
+        channel TEXT NOT NULL
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS playlist_songs (
@@ -64,7 +64,6 @@ const getPlaylistData = (id) => new Promise((resolve, reject) => {
             FROM playlists
             WHERE id = ?`, [id], (err, rows) => {
         if (err) return reject('Error getting data of playlist');
-        console.log(rows)
         resolve(rows.map(row => ({id: row.id, title: row.title, position: row.position}))[0]);
     })
 })
@@ -72,12 +71,9 @@ const getPlaylistData = (id) => new Promise((resolve, reject) => {
 const getHighestPlaylistPosition = () => new Promise((resolve, reject) => {
     db.all('SELECT MAX(position) as position FROM playlists', (err, rows) => {
         if (err) return reject('Error fetching max position');
-        console.log(rows)
         if (rows[0].position === null) {
-            console.log('nothing')
             resolve(-1)
         } else {
-            console.log('resolving', rows[0].position)
             resolve(rows[0].position);
         }
     });
@@ -85,7 +81,7 @@ const getHighestPlaylistPosition = () => new Promise((resolve, reject) => {
 
 
 const getSongs = (playlistId) => new Promise((resolve, reject) => {
-    db.all(`SELECT songs.id, songs.title, songs.path, songs.channel, songs.duration, playlist_songs.position
+    db.all(`SELECT songs.id, songs.title, songs.path, songs.channel, playlist_songs.position
             FROM songs
                      JOIN
                  playlist_songs
@@ -129,9 +125,11 @@ const deleteUnreferencedSongs = () => {
     db.all('SELECT id, path FROM songs WHERE id NOT IN (SELECT song_id FROM playlist_songs)', (err, rows) => {
         if (err) return console.error('Error fetching unreferenced songs:', err.message);
         rows.forEach((row) => {
-            fs.unlink(row.path, (err) => {
-                if (err) console.error('Error deleting song file', err.message); else console.log('Deleted song file:', row.path);
-            });
+            if (row.path.includes(SONG_DIRECTORY)) {
+                fs.unlink(row.path, (err) => {
+                    if (err) console.error('Error deleting song file', err.message); else console.log('Deleted song file:', row.path);
+                });
+            }
             db.run('DELETE FROM songs WHERE id NOT IN (SELECT song_id FROM playlist_songs)', (err) => {
                 if (err) console.error('Error deleting unreferenced songs from database:', err.message); else console.log('Deleted unreferenced songs from database');
             });
@@ -142,25 +140,35 @@ const deleteUnreferencedSongs = () => {
 // Playlist functions
 const fetchPlaylistData = (playlistURL) => new Promise((resolve, reject) => {
     let output = '';
-    let command = child_process.spawn('yt-dlp', ['-j', '--flat-playlist', '--no-warnings', playlistURL]);
+    let command = child_process.spawn('yt-dlp', ['-J', '--flat-playlist', '--no-warnings', playlistURL]);
 
     command.stdout.on('data', (data) => output += data.toString());
     command.stderr.on('data', (data) => console.error(data));
     command.on('close', () => {
         try {
-            const jsonLines = output.split('\n').filter(line => line.length > 0).map(line => JSON.parse(line));
-            if (jsonLines.length === 0) return reject('empty');
-            const playlistData = {
-                id: jsonLines[0].playlist_id,
-                title: jsonLines[0].playlist_title.replace(/^Album - /, ''),
-                songs: jsonLines.map(rawSong => ({
+            const jsonLine = JSON.parse(output);
+            if (jsonLine.length === 0) return reject('empty');
+            let playlistData = {
+                id: jsonLine.id,
+                title: jsonLine.title.replace(/^Album - /, ''),
+                songs: jsonLine.entries.map(rawSong => ({
                     id: rawSong.id,
                     title: rawSong.title,
                     path: '',
                     channel: rawSong.channel.replace(/ - Topic$/, ''),
-                    duration: rawSong.duration
                 }))
             };
+            let descriptionJson = JSON.parse(jsonLine.description);
+            descriptionJson.forEach((song) => {
+                console.log(song);
+                playlistData.songs.splice(song.position - 1, 0, {
+                    id: song.path,
+                    title: song.title,
+                    path: path.join(SONG_FILE_DIRECTORY, song.path),
+                    channel: 'file'
+                });
+            });
+            console.log(playlistData)
             resolve(playlistData);
         } catch (e) {
             console.error(`error parsing json: ${e}`);
@@ -171,6 +179,7 @@ const fetchPlaylistData = (playlistURL) => new Promise((resolve, reject) => {
 });
 
 const downloadSong = (song, directory) => new Promise((resolve) => {
+    if (song.channel === 'file') resolve(song)
     const command = child_process.spawn('yt-dlp', ['-x', '--restrict-filenames', '--windows-filenames', '-P', directory, `https://youtube.com/watch?v=${song.id}`]);
     command.stdout.on('data', (data) => {
         console.log(data.toString());
@@ -194,11 +203,11 @@ const downloadPlaylist = (playlistURL) => new Promise(async (resolve, reject) =>
             const dir = path.join(SONG_DIRECTORY, letter);
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
         });
+        if (!fs.existsSync(SONG_FILE_DIRECTORY)) fs.mkdirSync(SONG_FILE_DIRECTORY, {recursive: true});
 
         const playlistData = await fetchPlaylistData(playlistURL);
         mainWindow.webContents.send('playlistProgress', [playlistURL, 0]);
         const highestPosition = await getHighestPlaylistPosition()
-        console.log(highestPosition)
 
         db.get('SELECT id, title FROM playlists WHERE id = ?', [playlistData.id], (err, row) => {
             if (err) return reject(err);
@@ -239,7 +248,7 @@ const downloadPlaylist = (playlistURL) => new Promise(async (resolve, reject) =>
                             let downloadedSong = await downloadSong(song, songPath);
                             if (downloadedSong) {
                                 db.run(`INSERT
-                                OR REPLACE INTO songs (id, title, path, channel, duration) VALUES (?, ?, ?, ?, ?)`, [downloadedSong.id, downloadedSong.title, downloadedSong.path, downloadedSong.channel, downloadedSong.duration]);
+                                OR REPLACE INTO songs (id, title, path, channel) VALUES (?, ?, ?, ?)`, [downloadedSong.id, downloadedSong.title, downloadedSong.path, downloadedSong.channel]);
                             }
                         }
                         db.run(`INSERT
@@ -261,21 +270,24 @@ const downloadPlaylist = (playlistURL) => new Promise(async (resolve, reject) =>
 
 const removePlaylist = (playlistID) => new Promise(async (resolve, reject) => {
     try {
-        const playlistData = await fetchPlaylistData(`https://youtube.com/playlist?list=${playlistID}`);
+        // Get playlist data from database without fetching from YouTube
         const playlistDatabaseData = await getPlaylistData(playlistID);
+        if (!playlistDatabaseData) {
+            return reject('Playlist not found in database');
+        }
 
         const deletePlaylistPromise = new Promise((resolve, reject) => {
-            db.run('DELETE FROM playlists WHERE id = ?', [playlistData.id], (err) => {
+            db.run('DELETE FROM playlists WHERE id = ?', [playlistID], (err) => {
                 if (err) return reject(err);
-                console.log('Playlist deleted:', playlistData.title);
+                console.log('Playlist deleted:', playlistID);
                 resolve();
             });
         });
 
         const deletePlaylistSongsPromise = new Promise((resolve, reject) => {
-            db.run('DELETE FROM playlist_songs WHERE playlist_id = ?', [playlistData.id], (err) => {
+            db.run('DELETE FROM playlist_songs WHERE playlist_id = ?', [playlistID], (err) => {
                 if (err) return reject(err);
-                console.log('Playlist songs deleted for playlist:', playlistData.title);
+                console.log('Playlist songs deleted for playlist:', playlistID);
                 resolve();
             });
         });
@@ -288,8 +300,8 @@ const removePlaylist = (playlistID) => new Promise(async (resolve, reject) => {
                 if (err) return reject(err);
                 console.log('Playlist positions decremented');
                 resolve();
-            })
-        })
+            });
+        });
 
         await Promise.all([deletePlaylistPromise, deletePlaylistSongsPromise, updatePlaylistPositions]);
         await deleteUnreferencedSongs();
