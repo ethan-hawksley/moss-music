@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A music player",
   "main": "main.js",
+  "type": "commonjs",
   "build": {
     "appId": "com.ethan-hawksley.music",
     "productName": "Moss Music",
