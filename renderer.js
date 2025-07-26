@@ -1,22 +1,30 @@
 // Constants and initializations
-const addPlaylistInput = document.getElementById("add-playlist-input");
-const addPlaylistInputButton = document.getElementById("add-playlist-input-button",);
-const downloadProgress = document.getElementById("download-progress");
-const removePlaylistInputButton = document.getElementById("remove-playlist-input-button",);
-const refreshPlaylistInputButton = document.getElementById("refresh-playlist-input-button",);
-const reorderPlaylistInputButton = document.getElementById("reorder-playlist-input-button",);
-const playlistListDiv = document.getElementById("playlist-list");
-const playerDiv = document.getElementById("player");
-const audioPlayer = document.getElementById("audio-player");
-const currentSong = document.getElementById("current-song");
-const nextSongButton = document.getElementById("next-button");
-const previousSongButton = document.getElementById("previous-button");
-const shuffleCheckbox = document.getElementById("shuffle-checkbox");
-const playbackSettingForm = document.getElementById("playback-setting-form");
-const songListDiv = document.getElementById("song-list");
+const addPlaylistInput = document.getElementById('add-playlist-input');
+const addPlaylistInputButton = document.getElementById(
+  'add-playlist-input-button',
+);
+const downloadProgress = document.getElementById('download-progress');
+const removePlaylistInputButton = document.getElementById(
+  'remove-playlist-input-button',
+);
+const refreshPlaylistInputButton = document.getElementById(
+  'refresh-playlist-input-button',
+);
+const reorderPlaylistInputButton = document.getElementById(
+  'reorder-playlist-input-button',
+);
+const playlistListDiv = document.getElementById('playlist-list');
+const playerDiv = document.getElementById('player');
+const audioPlayer = document.getElementById('audio-player');
+const currentSong = document.getElementById('current-song');
+const nextSongButton = document.getElementById('next-button');
+const previousSongButton = document.getElementById('previous-button');
+const shuffleCheckbox = document.getElementById('shuffle-checkbox');
+const playbackSettingForm = document.getElementById('playback-setting-form');
+const songListDiv = document.getElementById('song-list');
 
 let songPosition = 0;
-let currentPlaylist = "";
+let currentPlaylist = '';
 let songs = [];
 
 // Utility functions
@@ -52,22 +60,22 @@ const shuffleSongs = () => {
 // Main application logic.
 const playPlaylist = async (playlistId) => {
   // If in playlist deletion mode delete the playlist
-  if (removePlaylistInputButton.textContent === "Cancel") {
+  if (removePlaylistInputButton.textContent === 'Cancel') {
     if (currentPlaylist === playlistId) {
-      playerDiv.style.display = "none";
+      playerDiv.style.display = 'none';
     }
     const playlistButtons = playlistListDiv.children;
     for (let i = 0; i < playlistButtons.length; i++) {
-      playlistButtons[i].classList.remove("show-crosshair");
+      playlistButtons[i].classList.remove('show-crosshair');
     }
-    removePlaylistInputButton.textContent = "Remove";
+    removePlaylistInputButton.textContent = 'Remove';
     await window.ytdlp.removePlaylist(playlistId);
     await renderPlaylists();
     enableButtons();
-  } else if (reorderPlaylistInputButton.textContent === "Cancel") {
+  } else if (reorderPlaylistInputButton.textContent === 'Cancel') {
     if (currentPlaylist !== playlistId && currentPlaylist) {
       await window.ytdlp.swapPlaylists(currentPlaylist, playlistId);
-      reorderPlaylistInputButton.textContent = "Reorder";
+      reorderPlaylistInputButton.textContent = 'Reorder';
       await renderPlaylists();
     }
   } else {
@@ -76,57 +84,61 @@ const playPlaylist = async (playlistId) => {
       songPosition = 0;
       if (currentPlaylist) {
         try {
-          document.getElementById(currentPlaylist + "-button").className = "";
+          document.getElementById(currentPlaylist + '-button').className = '';
         } catch (e) {
           console.error(`Playlist ${currentPlaylist} is unavailable`);
           console.error(e);
         }
       }
       currentPlaylist = playlistId;
-      document.getElementById(playlistId + "-button").className = "active";
+      document.getElementById(playlistId + '-button').className = 'active';
     }
     songs = await window.ytdlp.getSongs(playlistId);
     const fragment = document.createDocumentFragment();
     songs.forEach((song) => {
-      const button = document.createElement("button");
+      const button = document.createElement('button');
       button.textContent = song.title;
-      button.id = song.id + "-button";
-      button.addEventListener("click", () => playSong(song.id));
+      button.id = song.id + '-button';
+      button.addEventListener('click', () => playSong(song.id));
       fragment.appendChild(button);
     });
     songListDiv.replaceChildren(fragment);
-    playerDiv.style.display = "block";
+    playerDiv.style.display = 'block';
     if (shuffleCheckbox.checked) {
       shuffleSongs();
     }
     updateAudioPlayer(songs[songPosition]);
-    document.getElementById(songs[songPosition].id + "-button").className = "active";
+    document.getElementById(songs[songPosition].id + '-button').className =
+      'active';
   }
 };
 
 const playSong = (songId) => {
-  document.getElementById(songs[songPosition].id + "-button").className = "";
+  document.getElementById(songs[songPosition].id + '-button').className = '';
   songPosition = songs.findIndex((song) => song.id === songId);
   updateAudioPlayer(songs[songPosition]);
-  document.getElementById(songs[songPosition].id + "-button").className = "active";
+  document.getElementById(songs[songPosition].id + '-button').className =
+    'active';
 };
 
 const nextSong = () => {
-  document.getElementById(songs[songPosition].id + "-button").className = "";
+  document.getElementById(songs[songPosition].id + '-button').className = '';
   songPosition = songPosition < songs.length - 1 ? songPosition + 1 : 0;
   if (songPosition === 0 && shuffleCheckbox.checked) {
     shuffleSongs();
   }
   updateAudioPlayer(songs[songPosition]);
-  document.getElementById(songs[songPosition].id + "-button").className = "active";
+  document.getElementById(songs[songPosition].id + '-button').className =
+    'active';
 };
 
 const previousSong = () => {
   if (songPosition > 0) {
-    document.getElementById(songs[songPosition].id + "-button").className = "";
+    document.getElementById(songs[songPosition].id + '-button').className = '';
     songPosition--;
     updateAudioPlayer(songs[songPosition]);
-    document.getElementById(songs[songPosition].id + "-button").className = "active";
+    document.getElementById(songs[songPosition].id + '-button').className =
+      'active';
   }
 };
 
@@ -134,20 +146,20 @@ const renderPlaylists = async () => {
   const playlists = await window.ytdlp.getPlaylists();
   const fragment = document.createDocumentFragment();
   playlists.forEach((playlist) => {
-    const button = document.createElement("button");
+    const button = document.createElement('button');
     button.textContent = playlist.title;
-    button.id = playlist.id + "-button";
-    button.addEventListener("click", () => playPlaylist(playlist.id));
+    button.id = playlist.id + '-button';
+    button.addEventListener('click', () => playPlaylist(playlist.id));
     fragment.appendChild(button);
   });
   playlistListDiv.replaceChildren(fragment);
   if (currentPlaylist) {
-    document.getElementById(currentPlaylist + "-button").className = "active";
+    document.getElementById(currentPlaylist + '-button').className = 'active';
   }
 };
 
 const setupEventListeners = () => {
-  shuffleCheckbox.addEventListener("change", () => {
+  shuffleCheckbox.addEventListener('change', () => {
     const currentSongId = songs[songPosition].id;
     if (shuffleCheckbox.checked) {
       shuffleSongs();
@@ -157,69 +169,69 @@ const setupEventListeners = () => {
     songPosition = songs.findIndex((song) => song.id === currentSongId);
   });
 
-  audioPlayer.addEventListener("ended", () => {
-    const playbackSetting = playbackSettingForm.elements["playback"].value;
-    if (playbackSetting === "continue") {
+  audioPlayer.addEventListener('ended', () => {
+    const playbackSetting = playbackSettingForm.elements['playback'].value;
+    if (playbackSetting === 'continue') {
       nextSong();
-    } else if (playbackSetting === "loop") {
+    } else if (playbackSetting === 'loop') {
       audioPlayer.play();
     }
   });
 
-  nextSongButton.addEventListener("click", nextSong);
-  previousSongButton.addEventListener("click", previousSong);
+  nextSongButton.addEventListener('click', nextSong);
+  previousSongButton.addEventListener('click', previousSong);
 
-  addPlaylistInputButton.addEventListener("click", async () => {
-    if (addPlaylistInput.value !== "") {
+  addPlaylistInputButton.addEventListener('click', async () => {
+    if (addPlaylistInput.value !== '') {
       disableButtons();
       const playlistToDownload = addPlaylistInput.value;
-      addPlaylistInput.value = "";
+      addPlaylistInput.value = '';
       await window.ytdlp.downloadPlaylist(playlistToDownload);
       await renderPlaylists();
       enableButtons();
     }
   });
 
-  removePlaylistInputButton.addEventListener("click", async () => {
+  removePlaylistInputButton.addEventListener('click', async () => {
     addPlaylistInputButton.disabled = true;
     const playlistButtons = playlistListDiv.children;
-    if (removePlaylistInputButton.textContent === "Remove") {
-      removePlaylistInputButton.textContent = "Cancel";
+    if (removePlaylistInputButton.textContent === 'Remove') {
+      removePlaylistInputButton.textContent = 'Cancel';
       for (let i = 0; i < playlistButtons.length; i++) {
-        playlistButtons[i].classList.add("show-crosshair");
+        playlistButtons[i].classList.add('show-crosshair');
       }
     } else {
-      removePlaylistInputButton.textContent = "Remove";
+      removePlaylistInputButton.textContent = 'Remove';
       enableButtons();
       for (let i = 0; i < playlistButtons.length; i++) {
-        playlistButtons[i].classList.remove("show-crosshair");
+        playlistButtons[i].classList.remove('show-crosshair');
       }
     }
   });
 
-  refreshPlaylistInputButton.addEventListener("click", async () => {
+  refreshPlaylistInputButton.addEventListener('click', async () => {
     disableButtons();
     const playlists = await window.ytdlp.getPlaylists();
     for (const playlist of playlists) {
       await window.ytdlp.downloadPlaylist(playlist.id);
     }
-    localStorage.setItem("last-updated", Date.now().valueOf().toString());
+    localStorage.setItem('last-updated', Date.now().valueOf().toString());
     enableButtons();
   });
 
-  reorderPlaylistInputButton.addEventListener("click", async () => {
+  reorderPlaylistInputButton.addEventListener('click', async () => {
     addPlaylistInputButton.disabled = true;
     const playlistButtons = playlistListDiv.children;
-    if (reorderPlaylistInputButton.textContent === "Reorder") {
-      reorderPlaylistInputButton.textContent = "Cancel";
+    if (reorderPlaylistInputButton.textContent === 'Reorder') {
+      reorderPlaylistInputButton.textContent = 'Cancel';
       for (let i = 0; i < playlistButtons.length; i++) {
-        playlistButtons[i].classList.add("show-crosshair");
+        playlistButtons[i].classList.add('show-crosshair');
       }
     } else {
-      reorderPlaylistInputButton.textContent = "Reorder";
+      reorderPlaylistInputButton.textContent = 'Reorder';
       enableButtons();
       for (let i = 0; i < playlistButtons.length; i++) {
-        playlistButtons[i].classList.remove("show-crosshair");
+        playlistButtons[i].classList.remove('show-crosshair');
       }
     }
   });
@@ -233,8 +245,12 @@ const setupEventListeners = () => {
     }
   });
 
-  audioPlayer.addEventListener("play", () => window.playback.playbackChange("play"),);
-  audioPlayer.addEventListener("pause", () => window.playback.playbackChange("pause"),);
+  audioPlayer.addEventListener('play', () =>
+    window.playback.playbackChange('play'),
+  );
+  audioPlayer.addEventListener('pause', () =>
+    window.playback.playbackChange('pause'),
+  );
 
   window.playback.play(() => audioPlayer.play().catch((e) => nextSong()));
   window.playback.pause(() => audioPlayer.pause());
@@ -248,17 +264,24 @@ const init = async () => {
   await renderPlaylists();
 
   // Check if the playlists need to be updated every 24 hours.
-  if (localStorage.getItem("last-updated")) {
+  if (localStorage.getItem('last-updated')) {
     const currentTime = Date.now().valueOf();
-    if (currentTime - Number(localStorage.getItem("last-updated")) > 604800000 /* 7 days */) {
+    if (
+      currentTime - Number(localStorage.getItem('last-updated')) >
+      604800000 /* 7 days */
+    ) {
       if (window.navigator.onLine) {
         const playlists = await window.ytdlp.getPlaylists();
-        await Promise.all(playlists.map((playlist) => window.ytdlp.downloadPlaylist(playlist.id),),);
-        localStorage.setItem("last-updated", currentTime.toString());
+        await Promise.all(
+          playlists.map((playlist) =>
+            window.ytdlp.downloadPlaylist(playlist.id),
+          ),
+        );
+        localStorage.setItem('last-updated', currentTime.toString());
       }
     }
   } else {
-    localStorage.setItem("last-updated", Date.now().valueOf().toString());
+    localStorage.setItem('last-updated', Date.now().valueOf().toString());
   }
   enableButtons();
 };

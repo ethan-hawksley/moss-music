@@ -43,7 +43,8 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^33.0.2",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "prettier": "^3.6.2"
   },
   "dependencies": {
     "sqlite3": "^5.1.7"
