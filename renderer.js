@@ -1,18 +1,10 @@
 // Constants and initializations
 const addPlaylistInput = document.getElementById("add-playlist-input");
-const addPlaylistInputButton = document.getElementById(
-  "add-playlist-input-button",
-);
+const addPlaylistInputButton = document.getElementById("add-playlist-input-button",);
 const downloadProgress = document.getElementById("download-progress");
-const removePlaylistInputButton = document.getElementById(
-  "remove-playlist-input-button",
-);
-const refreshPlaylistInputButton = document.getElementById(
-  "refresh-playlist-input-button",
-);
-const reorderPlaylistInputButton = document.getElementById(
-  "reorder-playlist-input-button",
-);
+const removePlaylistInputButton = document.getElementById("remove-playlist-input-button",);
+const refreshPlaylistInputButton = document.getElementById("refresh-playlist-input-button",);
+const reorderPlaylistInputButton = document.getElementById("reorder-playlist-input-button",);
 const playlistListDiv = document.getElementById("playlist-list");
 const playerDiv = document.getElementById("player");
 const audioPlayer = document.getElementById("audio-player");
@@ -108,8 +100,7 @@ const playPlaylist = async (playlistId) => {
       shuffleSongs();
     }
     updateAudioPlayer(songs[songPosition]);
-    document.getElementById(songs[songPosition].id + "-button").className =
-      "active";
+    document.getElementById(songs[songPosition].id + "-button").className = "active";
   }
 };
 
@@ -117,8 +108,7 @@ const playSong = (songId) => {
   document.getElementById(songs[songPosition].id + "-button").className = "";
   songPosition = songs.findIndex((song) => song.id === songId);
   updateAudioPlayer(songs[songPosition]);
-  document.getElementById(songs[songPosition].id + "-button").className =
-    "active";
+  document.getElementById(songs[songPosition].id + "-button").className = "active";
 };
 
 const nextSong = () => {
@@ -128,8 +118,7 @@ const nextSong = () => {
     shuffleSongs();
   }
   updateAudioPlayer(songs[songPosition]);
-  document.getElementById(songs[songPosition].id + "-button").className =
-    "active";
+  document.getElementById(songs[songPosition].id + "-button").className = "active";
 };
 
 const previousSong = () => {
@@ -137,8 +126,7 @@ const previousSong = () => {
     document.getElementById(songs[songPosition].id + "-button").className = "";
     songPosition--;
     updateAudioPlayer(songs[songPosition]);
-    document.getElementById(songs[songPosition].id + "-button").className =
-      "active";
+    document.getElementById(songs[songPosition].id + "-button").className = "active";
   }
 };
 
@@ -245,12 +233,8 @@ const setupEventListeners = () => {
     }
   });
 
-  audioPlayer.addEventListener("play", () =>
-    window.playback.playbackChange("play"),
-  );
-  audioPlayer.addEventListener("pause", () =>
-    window.playback.playbackChange("pause"),
-  );
+  audioPlayer.addEventListener("play", () => window.playback.playbackChange("play"),);
+  audioPlayer.addEventListener("pause", () => window.playback.playbackChange("pause"),);
 
   window.playback.play(() => audioPlayer.play().catch((e) => nextSong()));
   window.playback.pause(() => audioPlayer.pause());
@@ -264,17 +248,10 @@ const init = async () => {
   // Check if the playlists need to be updated every 24 hours.
   if (localStorage.getItem("last-updated")) {
     const currentTime = Date.now().valueOf();
-    if (
-      currentTime - Number(localStorage.getItem("last-updated")) >
-      604800000 /* 7 days */
-    ) {
+    if (currentTime - Number(localStorage.getItem("last-updated")) > 604800000 /* 7 days */) {
       if (window.navigator.onLine) {
         const playlists = await window.ytdlp.getPlaylists();
-        await Promise.all(
-          playlists.map((playlist) =>
-            window.ytdlp.downloadPlaylist(playlist.id),
-          ),
-        );
+        await Promise.all(playlists.map((playlist) => window.ytdlp.downloadPlaylist(playlist.id),),);
         localStorage.setItem("last-updated", currentTime.toString());
       }
     }
