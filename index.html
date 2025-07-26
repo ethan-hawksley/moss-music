@@ -11,52 +11,52 @@
 </head>
 <body>
 <div id="page-container">
-<header>
-    <h1>Moss Music</h1>
-</header>
-<main>
-    <form id="add-playlist-form">
-        <label for="add-playlist-input">Add Playlist:</label>
-        <input id="add-playlist-input" type="text"/>
-        <button id="add-playlist-input-button" type="button">Add</button>
-    </form>
-    <label>
-        Download Progress:
-        <progress id="download-progress" max="1" value="0"></progress>
-    </label>
-    <br/>
-    <button id="remove-playlist-input-button" type="button">Remove</button>
-    <button id="refresh-playlist-input-button" type="button">Refresh</button>
-    <button id="reorder-playlist-input-button" type="button">Reorder</button>
-    <div id="playlist-list">
-        <!-- Dynamically populated by list of playlists -->
-    </div>
-    <div id="player" style="display: none">
-        <p id="current-song"></p>
-        <audio controls id="audio-player" src=""></audio>
-        <br/>
-        <button id="previous-button">Previous</button>
-        <button id="next-button">Next</button>
-        <label for="shuffle-checkbox">Shuffle</label>
-        <input id="shuffle-checkbox" type="checkbox"/>
-        <form id="playback-setting-form">
-            <label>
-                <input checked name="playback" type="radio" value="continue"/>
-                Continue
-            </label>
-            <label>
-                <input name="playback" type="radio" value="loop"/> Loop
-            </label>
-            <label>
-                <input name="playback" type="radio" value="stop"/> Stop
-            </label>
+    <header>
+        <h1>Moss Music</h1>
+    </header>
+    <main>
+        <form id="add-playlist-form">
+            <label for="add-playlist-input">Add Playlist:</label>
+            <input id="add-playlist-input" type="text"/>
+            <button id="add-playlist-input-button" type="button">Add</button>
         </form>
+        <label>
+            Download Progress:
+            <progress id="download-progress" max="1" value="0"></progress>
+        </label>
         <br/>
-        <div id="song-list">
-            <!-- Dynamically populated by list of songs -->
+        <button id="remove-playlist-input-button" type="button">Remove</button>
+        <button id="refresh-playlist-input-button" type="button">Refresh</button>
+        <button id="reorder-playlist-input-button" type="button">Reorder</button>
+        <div id="playlist-list">
+            <!-- Dynamically populated by list of playlists -->
         </div>
-    </div>
-</main>
+        <div id="player" style="display: none">
+            <p id="current-song"></p>
+            <audio controls id="audio-player" src=""></audio>
+            <br/>
+            <button id="previous-button">Previous</button>
+            <button id="next-button">Next</button>
+            <label for="shuffle-checkbox">Shuffle</label>
+            <input id="shuffle-checkbox" type="checkbox"/>
+            <form id="playback-setting-form">
+                <label>
+                    <input checked name="playback" type="radio" value="continue"/>
+                    Continue
+                </label>
+                <label>
+                    <input name="playback" type="radio" value="loop"/> Loop
+                </label>
+                <label>
+                    <input name="playback" type="radio" value="stop"/> Stop
+                </label>
+            </form>
+            <br/>
+            <div id="song-list">
+                <!-- Dynamically populated by list of songs -->
+            </div>
+        </div>
+    </main>
 </div>
 <script src="./renderer.js"></script>
 </body>

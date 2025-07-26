@@ -9,7 +9,7 @@ const {
 const path = require("node:path");
 const fs = require("node:fs");
 const child_process = require("node:child_process");
-const { pid } = require("node:process");
+const {pid} = require("node:process");
 const sqlite3 = require("sqlite3").verbose();
 
 let DATA_DIRECTORY;
@@ -24,7 +24,7 @@ if (process.platform === "linux") {
   DATA_DIRECTORY = app.getPath("userData");
 }
 if (!fs.existsSync(DATA_DIRECTORY))
-  fs.mkdirSync(DATA_DIRECTORY, { recursive: true });
+  fs.mkdirSync(DATA_DIRECTORY, {recursive: true});
 console.log(DATA_DIRECTORY);
 const DB_PATH = path.join(DATA_DIRECTORY, "database.db");
 const SONG_DIRECTORY = path.join(DATA_DIRECTORY, "songs");
@@ -308,10 +308,15 @@ const fetchPlaylistData = (playlistURL) =>
           title: jsonLine.title.replace(/^Album - /, ""),
           songs: jsonLine.entries.map((rawSong) => ({
             id: rawSong.id,
-            title: rawSong.title.replace(
-              /\([^)]*(remaster|ost|acoustic)[^)]*\)/gi,
-              "",
-            ),
+            title: rawSong.title
+              .replace(/^\d+\.\s*/, "") // Remove leading track number
+              .replace(
+                /^.*?(?:OST|Soundtrack|Remaster|Acoustic)\s*(?:\([^)]*\))?\s*-\s*/i,
+                "",
+              ) // Remove OST/Soundtrack prefixes with optional parentheticals
+              .replace(/\s*\([^)]*(?:Soundtrack|OST|Chapter)[^)]*\)/gi, "") // Remove soundtrack-related parentheticals
+              .replace(/\s*-\s*[^-]*$/, "") // Remove trailing artist after dash
+              .trim(),
             path: "",
             channel: rawSong.channel?.replace(/ - Topic$/, "") || "unknown",
           })),
@@ -404,10 +409,10 @@ const downloadPlaylist = (playlistURL) =>
       const characters = "abcdefghijklmnopqrstuvwxyz0123456789_".split("");
       characters.forEach((letter) => {
         const dir = path.join(SONG_DIRECTORY, letter);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
       });
       if (!fs.existsSync(SONG_FILE_DIRECTORY)) {
-        fs.mkdirSync(SONG_FILE_DIRECTORY, { recursive: true });
+        fs.mkdirSync(SONG_FILE_DIRECTORY, {recursive: true});
       }
 
       let playlistData;
@@ -485,53 +490,86 @@ const downloadPlaylist = (playlistURL) =>
             );
           });
 
-          const downloadPromises = playlistData.songs.map(
-            async (song, index) => {
+          // Process songs in batches to prevent memory overload
+          const batchSize = 5; // Limit concurrent downloads
+
+          const processSongBatch = async (songBatch) => {
+            const batchPromises = songBatch.map(async ({song, index}) => {
               return new Promise((resolve, reject) => {
                 db.get(
                   "SELECT id FROM songs WHERE id = ?",
                   [song.id],
                   async (err, row) => {
                     if (err) return reject(err);
-                    if (!row) {
-                      let directoryName = characters.includes(
-                        song.id[0].toLowerCase(),
-                      )
-                        ? song.id[0].toLowerCase()
-                        : "_";
-                      let songPath = path.join(SONG_DIRECTORY, directoryName);
-                      let downloadedSong = await downloadSong(song, songPath);
-                      if (downloadedSong) {
-                        db.run(
-                          `INSERT
-                                OR REPLACE INTO songs (id, title, path, channel) VALUES (?, ?, ?, ?)`,
-                          [
-                            downloadedSong.id,
-                            downloadedSong.title,
-                            downloadedSong.path,
-                            downloadedSong.channel,
-                          ],
-                        );
+
+                    try {
+                      if (!row) {
+                        let directoryName = characters.includes(
+                          song.id[0].toLowerCase(),
+                        )
+                          ? song.id[0].toLowerCase()
+                          : "_";
+                        let songPath = path.join(SONG_DIRECTORY, directoryName);
+                        let downloadedSong = await downloadSong(song, songPath);
+                        if (downloadedSong) {
+                          db.run(
+                            `INSERT OR REPLACE INTO songs (id, title, path, channel) VALUES (?, ?, ?, ?)`,
+                            [
+                              downloadedSong.id,
+                              downloadedSong.title,
+                              downloadedSong.path,
+                              downloadedSong.channel,
+                            ],
+                          );
+                        }
                       }
+
+                      db.run(
+                        `INSERT OR REPLACE INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)`,
+                        [playlistData.id, song.id, index],
+                      );
+
+                      progress++;
+                      mainWindow.webContents.send("playlistProgress", [
+                        playlistData.id,
+                        progress / songCount,
+                      ]);
+                      resolve();
+                    } catch (downloadError) {
+                      console.error(
+                        `Error downloading song ${song.id}:`,
+                        downloadError,
+                      );
+                      // Still resolve to continue with other songs
+                      progress++;
+                      mainWindow.webContents.send("playlistProgress", [
+                        playlistData.id,
+                        progress / songCount,
+                      ]);
+                      resolve();
                     }
-                    db.run(
-                      `INSERT
-                        OR REPLACE INTO playlist_songs (playlist_id, song_id, position) VALUES (?, ?, ?)`,
-                      [playlistData.id, song.id, index],
-                    );
-                    progress++;
-                    mainWindow.webContents.send("playlistProgress", [
-                      playlistData.id,
-                      progress / songCount,
-                    ]);
-                    resolve();
                   },
                 );
               });
-            },
-          );
+            });
 
-          await Promise.all(downloadPromises);
+            await Promise.all(batchPromises);
+          };
+
+          // Process songs in batches
+          for (let i = 0; i < playlistData.songs.length; i += batchSize) {
+            const batch = playlistData.songs
+              .slice(i, i + batchSize)
+              .map((song, batchIndex) => ({song, index: i + batchIndex}));
+
+            await processSongBatch(batch);
+
+            // Add a small delay between batches to prevent overwhelming the system
+            if (i + batchSize < playlistData.songs.length) {
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+          }
+
           resolve();
         },
       );
@@ -619,7 +657,7 @@ function createWindow() {
     minWidth: 600,
     minHeight: 500,
     useContentSize: true,
-    webPreferences: { preload: path.join(__dirname, "preload.js") },
+    webPreferences: {preload: path.join(__dirname, "preload.js")},
     icon: path.join(__dirname, "icon.png"),
     backgroundColor: "#f4f4f4",
   });
@@ -630,13 +668,13 @@ function createWindow() {
 
 function updateTrayMenu(state) {
   const contextMenu = Menu.buildFromTemplate([
-    { label: "Show App", click: () => mainWindow.show() },
+    {label: "Show App", click: () => mainWindow.show()},
     {
       label: state === "play" ? "Pause" : "Play",
       click: () =>
         mainWindow.webContents.send(state === "play" ? "pause" : "play"),
     },
-    { label: "Quit", click: () => app.quit() },
+    {label: "Quit", click: () => app.quit()},
   ]);
   tray.setContextMenu(contextMenu);
 }
