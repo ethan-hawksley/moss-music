@@ -13,4 +13,6 @@ contextBridge.exposeInMainWorld("playback", {
   playbackChange: (state) => ipcRenderer.send("playbackChange", state),
   play: (callback) => ipcRenderer.on("play", (_event) => callback()),
   pause: (callback) => ipcRenderer.on("pause", (_event) => callback()),
+  previous: (callback) => ipcRenderer.on("previous", (_event) => callback()),
+  next: (callback) => ipcRenderer.on("next", (_event) => callback())
 });

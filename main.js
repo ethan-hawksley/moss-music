@@ -215,6 +215,7 @@ const fetchPlaylistData = (playlistURL) => new Promise((resolve, reject) => {
     try {
       // Validate output exists
       if (!output || output.trim() === "") {
+        console.error("No output from yt-dlp");
         return reject("No output from yt-dlp");
       }
 
@@ -222,14 +223,17 @@ const fetchPlaylistData = (playlistURL) => new Promise((resolve, reject) => {
 
       // Validate required fields exist
       if (!jsonLine || !jsonLine.id || !jsonLine.title || !jsonLine.entries) {
+        console.error("Invalid playlist data format");
         return reject("Invalid playlist data format");
       }
 
       // Validate entries exist
       if (!Array.isArray(jsonLine.entries) || jsonLine.entries.length === 0) {
+        console.error("Playlist has no entries");
         return reject("Playlist has no entries");
       }
 
+      console.log("unprocessed JSON", jsonLine);
       let playlistData = {
         id: jsonLine.id, title: jsonLine.title.replace(/^Album - /, ""), songs: jsonLine.entries.map((rawSong) => ({
           id: rawSong.id, title: rawSong.title
@@ -240,6 +244,7 @@ const fetchPlaylistData = (playlistURL) => new Promise((resolve, reject) => {
             .trim(), path: "", channel: rawSong.channel?.replace(/ - Topic$/, "") || "unknown",
         })),
       };
+      console.log("processed JSON", jsonLine);
 
       // Handle description JSON
       let descriptionJson = [];
@@ -493,7 +498,10 @@ function updateTrayMenu(state) {
   const contextMenu = Menu.buildFromTemplate([{label: "Show App", click: () => mainWindow.show()}, {
     label: state === "play" ? "Pause" : "Play",
     click: () => mainWindow.webContents.send(state === "play" ? "pause" : "play"),
-  }, {label: "Quit", click: () => app.quit()},]);
+  },
+    {label: "Previous", click: () => mainWindow.webContents.send("previous")},
+    {label: "Next", click: () => mainWindow.webContents.send("next")},
+    {label: "Quit", click: () => app.quit()},]);
   tray.setContextMenu(contextMenu);
 }
 

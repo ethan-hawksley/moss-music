@@ -238,6 +238,8 @@ const setupEventListeners = () => {
 
   window.playback.play(() => audioPlayer.play().catch((e) => nextSong()));
   window.playback.pause(() => audioPlayer.pause());
+  window.playback.previous(() => previousSong());
+  window.playback.next(() => nextSong());
 };
 
 const init = async () => {
